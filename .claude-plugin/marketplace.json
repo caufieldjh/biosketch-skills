@@ -1,0 +1,22 @@
+{
+  "name": "biosketch-skills",
+  "owner": {
+    "name": "J. Harry Caufield",
+    "email": ""
+  },
+  "metadata": {
+    "description": "Agent Skills for working with scholarly biosketches and related documents",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "biosketch-skills",
+      "description": "Skills for working with scholarly biosketches and SciENcv formats, including DOE Current and Pending Support document conversion",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/doe-cpos-to-xml"
+      ]
+    }
+  ]
+}
