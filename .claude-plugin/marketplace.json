@@ -16,7 +16,9 @@
       "strict": false,
       "skills": [
         "./skills/doe-biosketch-to-xml",
-        "./skills/doe-cpos-to-xml"
+        "./skills/doe-biosketch-xml-to-pdf",
+        "./skills/doe-cpos-to-xml",
+        "./skills/doe-cpos-xml-to-pdf"
       ]
     }
   ]
