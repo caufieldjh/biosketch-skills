@@ -11,10 +11,11 @@
   "plugins": [
     {
       "name": "biosketch-skills",
-      "description": "Skills for working with scholarly biosketches and SciENcv formats, including DOE Current and Pending Support document conversion",
+      "description": "Skills for working with scholarly biosketches and SciENcv formats, including DOE Biosketch and Current and Pending Support document conversion",
       "source": "./",
       "strict": false,
       "skills": [
+        "./skills/doe-biosketch-to-xml",
         "./skills/doe-cpos-to-xml"
       ]
     }
