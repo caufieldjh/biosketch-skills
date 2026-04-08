@@ -18,7 +18,9 @@
         "./skills/doe-biosketch-to-xml",
         "./skills/doe-biosketch-xml-to-pdf",
         "./skills/doe-cpos-to-xml",
-        "./skills/doe-cpos-xml-to-pdf"
+        "./skills/doe-cpos-xml-to-pdf",
+        "./skills/nih-biosketch-to-xml",
+        "./skills/nih-biosketch-xml-to-pdf"
       ]
     }
   ]

@@ -20,6 +20,14 @@ Converts a DOE Current and Pending (Other) Support PDF into SciENcv-compatible X
 
 Generates a DOE Current and Pending (Other) Support PDF from SciENcv C&P(O)S XML. Reproduces the standard DOE C&P(O)S form layout with identification fields, project entries, person-months tables, and objectives. Requires `reportlab` (`pip install reportlab`).
 
+### nih-biosketch-to-xml
+
+Converts an NIH Biographical Sketch PDF into SciENcv-compatible XML (sciencv.1.3 schema). Extracts identification (including eRA Commons username), education/training, personal statement (Section A), positions/appointments/honors (Section B), contributions to science with grouped citations (Section C), and research support (Section D) from the standard NIH biosketch form.
+
+### nih-biosketch-xml-to-pdf
+
+Generates an NIH Biographical Sketch PDF from SciENcv 1.3 XML. Reproduces the standard NIH biosketch form layout with sections A through D: Personal Statement, Positions/Scientific Appointments/Honors, Contributions to Science (narrative descriptions with supporting citations), and Research Support. Requires `reportlab` (`pip install reportlab`).
+
 ## Installation
 
 Add as a Claude Code plugin marketplace:
