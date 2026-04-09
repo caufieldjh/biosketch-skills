@@ -28,6 +28,10 @@ Converts an NIH Biographical Sketch PDF into SciENcv-compatible XML (sciencv.1.3
 
 Generates an NIH Biographical Sketch PDF from SciENcv 1.3 XML. Reproduces the standard NIH biosketch form layout with sections A through D: Personal Statement, Positions/Scientific Appointments/Honors, Contributions to Science (narrative descriptions with supporting citations), and Research Support. Requires `reportlab` (`pip install reportlab`).
 
+### biosketch-review
+
+Reviews an NIH or DOE Biographical Sketch for format compliance, completeness, and clarity. Checks against official requirements (including the new NIH format effective 01/25/2026), evaluates narrative quality, and assesses whether listed research products support the described planned efforts. Based on guidelines from [NIH](https://grants.nih.gov/grants-process/write-application/forms-directory/biosketch), [UNC Library](https://guides.lib.unc.edu/NIH-biosketch/biosketch), [Better at the Bench](https://www.betteratthebench.com/week-4-how-to-prepare-a-stellar-nih-biosketch), and [Stanford ORA](https://ora.stanford.edu/resources/disclosure-resources/department-energy-doe/doe-biosketch-resources).
+
 ## Installation
 
 Add as a Claude Code plugin marketplace:
