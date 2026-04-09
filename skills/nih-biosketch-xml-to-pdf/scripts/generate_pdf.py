@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Generate an NIH Biographical Sketch PDF from SciENcv 1.3 XML."""
+"""Generate an NIH Biographical Sketch PDF from SciENcv 1.3 XML.
+
+Produces the new Common Form layout (effective 01/25/2026). Accepts XML from
+both the new and old format — if citations are embedded under contributions
+or the personal statement, they are collected into the Products section.
+"""
 
 import sys
 import os
@@ -61,6 +66,7 @@ def parse_xml(xml_path):
 
     data = {
         "name": "",
+        "orcid": "",
         "era_commons": "",
         "position": "",
         "organization": "",
@@ -76,6 +82,12 @@ def parse_xml(xml_path):
     # Identification
     ident = find_el(root, "identification")
     if ident is not None:
+        # ORCID
+        for id_el in find_all_el(ident, "id"):
+            id_type = id_el.get("idtype", "")
+            if id_type == "orcid" and id_el.text:
+                data["orcid"] = id_el.text.strip()
+
         # eRA Commons
         for acct in find_all_el(ident, "account"):
             acct_type = acct.get("accounttype", "")
@@ -193,7 +205,7 @@ def parse_xml(xml_path):
                     "year": year,
                 })
 
-    # Contributions (Section C)
+    # Contributions (narratives + citations)
     contrib = find_el(root, "contributions")
     if contrib is not None:
         for citations_group in find_all_el(contrib, "citations"):
@@ -209,7 +221,7 @@ def parse_xml(xml_path):
                 "citations": pubs,
             })
 
-    # Statements (Personal Statement - Section A)
+    # Statements (Personal Statement)
     stmts = find_el(root, "statements")
     if stmts is not None:
         for stmt in find_all_el(stmts, "statement"):
@@ -225,7 +237,7 @@ def parse_xml(xml_path):
                 }
                 break
 
-    # Funding (Section D)
+    # Funding (Research Support)
     funding = find_el(root, "funding")
     if funding is not None:
         for award in find_all_el(funding, "award"):
@@ -318,6 +330,46 @@ def _parse_citation(citation):
     return " ".join(parts) if parts else title
 
 
+def _collect_products(data):
+    """Collect all citations into two product groups for the new Common Form.
+
+    Returns (closely_related, other_significant) lists of formatted citation
+    strings. Citations from contribution groups whose name contains "related"
+    or "Contribution 1" go into closely_related; the rest go into
+    other_significant. Citations from the personal statement (old format XML)
+    are added to other_significant.
+    """
+    closely_related = []
+    other_significant = []
+
+    for contrib in data["contributions"]:
+        name_lower = contrib["name"].lower()
+        if ("related" in name_lower or "closely" in name_lower
+                or contrib["name"] in ("Contribution 1", "Contribution 2")):
+            closely_related.extend(contrib["citations"])
+        else:
+            other_significant.extend(contrib["citations"])
+
+    # If all citations ended up in one bucket with none in the other,
+    # split them evenly (up to 5 each)
+    if closely_related and not other_significant and len(closely_related) > 5:
+        other_significant = closely_related[5:]
+        closely_related = closely_related[:5]
+    elif other_significant and not closely_related and len(other_significant) > 5:
+        closely_related = other_significant[:5]
+        other_significant = other_significant[5:]
+
+    # Personal statement citations (from old format) go to other_significant
+    if data["personal_statement"] and data["personal_statement"]["citations"]:
+        other_significant.extend(data["personal_statement"]["citations"])
+
+    # Cap at 5 each per new format rules
+    closely_related = closely_related[:5]
+    other_significant = other_significant[:5]
+
+    return closely_related, other_significant
+
+
 class NIHBiosketchDocTemplate(BaseDocTemplate):
     """Custom document template with NIH biosketch header and footer."""
 
@@ -340,8 +392,7 @@ class NIHBiosketchDocTemplate(BaseDocTemplate):
         # Header
         canvas.setFont("Times-Roman", 8)
         canvas.drawString(0.75 * inch, doc.pagesize[1] - 0.5 * inch,
-                          "OMB No. 0925-0001 and 0925-0002 (Rev. 10/2021 "
-                          "Approved Through 09/30/2024)")
+                          "OMB No. 0925-0001 and 0925-0002")
         canvas.drawRightString(width - 0.75 * inch, doc.pagesize[1] - 0.5 * inch,
                                "Biographical Sketch Format Page")
 
@@ -355,7 +406,7 @@ class NIHBiosketchDocTemplate(BaseDocTemplate):
 
 
 def build_elements(data):
-    """Build fresh flowable elements (must be called fresh each pass)."""
+    """Build fresh flowable elements in the new Common Form layout."""
     styles = getSampleStyleSheet()
     st = {
         "title": ParagraphStyle("BioTitle", parent=styles["Normal"],
@@ -397,10 +448,14 @@ def build_elements(data):
         "Follow this format for each person. <b>DO NOT EXCEED FIVE PAGES.</b>",
         st["subtitle"]))
 
-    # Identification
+    # --- Common Form: Identifying Information ---
     elements.append(rule())
     elements.append(Paragraph(f"NAME: {data['name']}", st["ident"]))
     elements.append(rule())
+    if data["orcid"]:
+        elements.append(Paragraph(
+            f"ORCID iD: {data['orcid']}", st["ident"]))
+        elements.append(rule())
     elements.append(Paragraph(
         f"eRA COMMONS USER NAME (credential, e.g., agency login): "
         f"{data['era_commons']}", st["ident"]))
@@ -409,13 +464,11 @@ def build_elements(data):
         f"POSITION TITLE: {data['position']}", st["ident"]))
     elements.append(rule())
 
-    # Education/Training
+    # --- Common Form: Professional Preparation ---
     if data["degrees"]:
+        elements.append(Spacer(1, 6))
         elements.append(Paragraph(
-            "EDUCATION/TRAINING (<i>Begin with baccalaureate or other initial "
-            "professional education, such as nursing, include postdoctoral "
-            "training and residency training if applicable. Add/delete rows as "
-            "necessary.</i>)", st["ident"]))
+            "<b><u>Professional Preparation</u></b>", st["section"]))
         hdr = ParagraphStyle("eh", fontName="Times-Bold", fontSize=9,
                              alignment=TA_CENTER)
         cell = ParagraphStyle("ec", fontName="Times-Roman", fontSize=9,
@@ -448,27 +501,11 @@ def build_elements(data):
         ]))
         elements.append(edu_table)
 
-    # Section A: Personal Statement
-    elements.append(Spacer(1, 6))
-    elements.append(Paragraph(
-        "<b>A. Personal Statement</b>", st["section"]))
-    if data["personal_statement"]:
-        ps = data["personal_statement"]
-        if ps["text"]:
-            elements.append(Paragraph(ps["text"], st["body"]))
-        for i, pub in enumerate(ps["citations"], 1):
-            elements.append(Paragraph(f"{i}. {pub}", st["citation"]))
-
-    # Section B: Positions, Scientific Appointments, and Honors
-    elements.append(Spacer(1, 6))
-    elements.append(Paragraph(
-        "<b>B. Positions, Scientific Appointments, and Honors</b>",
-        st["section"]))
-
-    # Positions and Employment
+    # --- Common Form: Appointments & Positions ---
     if data["positions"]:
+        elements.append(Spacer(1, 6))
         elements.append(Paragraph(
-            "<b>Positions and Employment</b>", st["subsection"]))
+            "<b><u>Appointments &amp; Positions</u></b>", st["section"]))
         for pos in data["positions"]:
             dr = pos["start_year"]
             if pos["current"] or not pos["end_year"]:
@@ -481,9 +518,39 @@ def build_elements(data):
             elements.append(Paragraph(
                 f"{dr}  {pos['title']}, {', '.join(org_parts)}", st["body"]))
 
-    # Honors
+    # --- Common Form: Products ---
+    closely_related, other_significant = _collect_products(data)
+    if closely_related or other_significant:
+        elements.append(Spacer(1, 6))
+        elements.append(Paragraph(
+            "<b><u>Products</u></b>", st["section"]))
+
+        if closely_related:
+            elements.append(Paragraph(
+                "<b>Most closely related to the proposed project</b>",
+                st["subsection"]))
+            for i, pub in enumerate(closely_related, 1):
+                elements.append(Paragraph(f"{i}. {pub}", st["citation"]))
+
+        if other_significant:
+            elements.append(Paragraph(
+                "<b>Other significant products</b>", st["subsection"]))
+            for i, pub in enumerate(other_significant, 1):
+                elements.append(Paragraph(f"{i}. {pub}", st["citation"]))
+
+    # --- NIH Supplement: Personal Statement ---
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(
+        "<b><u>Personal Statement</u></b>", st["section"]))
+    if data["personal_statement"] and data["personal_statement"]["text"]:
+        elements.append(Paragraph(
+            data["personal_statement"]["text"], st["body"]))
+
+    # --- NIH Supplement: Honors ---
     if data["distinctions"]:
-        elements.append(Paragraph("<b>Honors</b>", st["subsection"]))
+        elements.append(Spacer(1, 6))
+        elements.append(Paragraph(
+            "<b><u>Honors</u></b>", st["section"]))
         for d in data["distinctions"]:
             parts = []
             if d["year"]:
@@ -493,30 +560,24 @@ def build_elements(data):
                 parts.append(d["organization"])
             elements.append(Paragraph("  ".join(parts), st["body"]))
 
-    # Section C: Contribution to Science
-    if data["contributions"]:
+    # --- NIH Supplement: Contributions to Science ---
+    contributions_with_narratives = [
+        c for c in data["contributions"] if c["narrative"]]
+    if contributions_with_narratives:
         elements.append(Spacer(1, 6))
         elements.append(Paragraph(
-            "<b>C. Contribution to Science</b>", st["section"]))
-        for i, contrib in enumerate(data["contributions"], 1):
+            "<b><u>Contributions to Science</u></b>", st["section"]))
+        for i, contrib in enumerate(contributions_with_narratives, 1):
             elements.append(Spacer(1, 4))
-            # Narrative
-            narrative = contrib["narrative"] or ""
-            elements.append(Paragraph(f"<b>{i}.</b> {narrative}", st["body"]))
-            # Citations under this contribution
-            for j, pub in enumerate(contrib["citations"]):
-                letter_label = chr(ord('a') + j)
-                elements.append(Paragraph(
-                    f"{letter_label}. {pub}", st["citation"]))
+            elements.append(Paragraph(
+                f"<b>{i}.</b> {contrib['narrative']}", st["body"]))
 
-    # Section D: Research Support
+    # --- NIH Supplement: Research Support ---
     if data["awards"]:
         elements.append(Spacer(1, 6))
         elements.append(Paragraph(
-            "<b>D. Additional Information: Research Support and Scholastic "
-            "Performance</b>", st["section"]))
+            "<b><u>Research Support</u></b>", st["section"]))
 
-        # Split into ongoing and completed based on end date presence
         ongoing = [a for a in data["awards"] if not a["end"] or
                    a["end"] >= "2024"]
         completed = [a for a in data["awards"] if a["end"] and
@@ -539,7 +600,6 @@ def build_elements(data):
 
 def _add_award_block(elements, award, st):
     """Add a single research support entry."""
-    # Award ID line with source and role
     header_parts = []
     if award["award_id"]:
         header_parts.append(award["award_id"])
@@ -605,16 +665,21 @@ def main():
     data = parse_xml(input_path)
     num_pages = build_pdf(data, output_path)
 
+    closely_related, other_significant = _collect_products(data)
+
     print(f"Generated {output_path}")
     print(f"  {len(data['degrees'])} education entries")
     print(f"  {len(data['positions'])} positions")
     print(f"  {len(data['distinctions'])} honors/distinctions")
-    contribs = len(data["contributions"])
-    citations = sum(len(c["citations"]) for c in data["contributions"])
-    print(f"  {contribs} contributions ({citations} citations)")
+    print(f"  {len(closely_related)} closely related products")
+    print(f"  {len(other_significant)} other significant products")
+    contribs_with_narrative = sum(
+        1 for c in data["contributions"] if c["narrative"])
+    print(f"  {contribs_with_narrative} contribution narratives")
     print(f"  {len(data['awards'])} research support entries")
-    ps_cites = len(data["personal_statement"]["citations"]) if data["personal_statement"] else 0
-    print(f"  Personal statement with {ps_cites} citations")
+    has_ps = "yes" if data["personal_statement"] and data["personal_statement"]["text"] else "no"
+    print(f"  Personal statement: {has_ps}")
+    print(f"  ORCID: {data['orcid'] or 'not provided'}")
     print(f"  {num_pages} pages")
 
 

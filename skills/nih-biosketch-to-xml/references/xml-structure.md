@@ -8,6 +8,7 @@ Schema: `sciencv.1.3.xsd` at https://api.ncbi.nlm.nih.gov/sciencv/schema/sciencv
 <?xml version="1.0" encoding="UTF-8"?>
 <profile xmlns="http://www.ncbi.nlm.nih.gov/sciencv">
 <identification>
+  <id idtype="orcid">0000-0001-2345-6789</id>
   <account accounttype="era">eRACommonsUsername</account>
   <name current="yes">
     <givennames>John</givennames>
@@ -151,13 +152,21 @@ Children (in order):
 
 | Element | Required | Description |
 |---------|----------|-------------|
-| `<id idtype="...">` | No | Identifiers (ORCID, etc.) |
+| `<id idtype="...">` | No | Identifiers — use `idtype="orcid"` for ORCID iD (required in new Common Form) |
 | `<account accounttype="...">` | No | Account references (eRA Commons) |
 | `<name current="yes/no">` | Yes (1+) | Name |
 | `<gender>` | No | |
 | `<birthdate>` | No | xs:date format |
 | `<language>` | No | Spoken/written language |
 | Contact elements | No | `<phone>`, `<mailingaddress>`, `<emailaddress>`, `<webaddress>` |
+
+#### `<id>` attributes:
+
+| Attribute | Required | Values |
+|-----------|----------|--------|
+| `idtype` | Yes | `"orcid"`, `"scopus"`, `"researcher"`, or other identifier types |
+
+Text content is the identifier value (e.g., `0000-0001-2345-6789` for ORCID).
 
 #### `<account>` attributes:
 
@@ -280,7 +289,7 @@ Children (in order):
 
 | Element | Required | Description |
 |---------|----------|-------------|
-| `<citations group="...">` | No (0+) | Publication groups (one per contribution) |
+| `<citations group="...">` | No (0+) | Publication/contribution groups (see note below) |
 | `<memberships>` | No (0+) | Professional memberships |
 | `<bibliographyurl>` | No | URL to full bibliography |
 
@@ -369,8 +378,14 @@ Contains `<statement>` elements.
 | `<citation>` | No (0+) | Associated publications |
 
 For the NIH Personal Statement, use `statementtype="personalstatement"` and put
-the narrative text in `<annotation>`. Any supporting citations listed after the
-personal statement become `<citation>` elements within the same `<statement>`.
+the narrative text in `<annotation>`.
+
+**Legacy format**: Any supporting citations listed after the personal statement
+become `<citation>` elements within the same `<statement>`.
+
+**New Common Form**: The personal statement has no citations (they are in the
+Products section under `<contributions>` instead). The `<statement>` element
+will contain only an `<annotation>`.
 
 ---
 
@@ -410,6 +425,28 @@ The structure is always:
 ---
 
 ## Field mapping: NIH Biosketch PDF to XML
+
+### New Common Form (2026+)
+
+| PDF Section | PDF Field | XML Path |
+|-------------|-----------|----------|
+| Identifying Info | NAME | `identification > name > givennames + surname` |
+| Identifying Info | ORCID iD | `identification > id[idtype="orcid"]` |
+| Identifying Info | eRA COMMONS | `identification > account[accounttype="era"]` |
+| Identifying Info | POSITION TITLE | `employment > position > positiontitle` (current) |
+| Professional Preparation | Institution, Location | `education > degree > organization` |
+| Professional Preparation | Degree | `education > degree[@degreetype]` |
+| Professional Preparation | Dates | `education > degree > startdate + enddate` |
+| Professional Preparation | Field of Study | `education > degree > major` |
+| Appointments & Positions | Each position | `employment > position` |
+| Products | Closely related | `contributions > citations[group="Most closely related..."] > citation` |
+| Products | Other significant | `contributions > citations[group="Other significant..."] > citation` |
+| Personal Statement | Narrative text | `statements > statement[statementtype="personalstatement"] > annotation` |
+| Honors | Each honor | `distinctions > distinction` |
+| Contributions | Contribution narrative | `contributions > citations[group="Contribution N"] > annotation` |
+| Research Support | Ongoing/completed grants | `funding > award` |
+
+### Legacy format (pre-2026)
 
 | PDF Section | PDF Field | XML Path |
 |-------------|-----------|----------|

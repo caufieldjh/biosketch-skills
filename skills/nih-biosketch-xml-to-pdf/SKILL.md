@@ -6,21 +6,27 @@ description: >
   NIH biographical sketch XML, or produce a printable NIH biosketch from XML data.
   Also trigger when the user mentions "NIH biosketch" or "NIH biographical sketch"
   together with "PDF" and "XML", or wants to render/print an NIH biosketch XML file.
-  Trigger for biosketches with sections A-D (Personal Statement, Positions/Honors,
-  Contributions to Science, Research Support).
+  Produces the new Common Form layout (effective 01/25/2026) and can also accept
+  old-format XML with embedded citations.
 ---
 
 # NIH Biosketch XML to PDF Converter
 
 Generate an NIH Biographical Sketch PDF from a SciENcv 1.3 schema XML file,
-reproducing the standard NIH biosketch form layout with sections A through D.
+producing the new Common Form layout (effective 01/25/2026).
 
 ## When this skill applies
 
 The user has a SciENcv 1.3 XML file (with `<profile>` root containing
 `<identification>`, `<education>`, `<employment>`, and optionally `<funding>`,
 `<distinctions>`, `<contributions>`, and `<statements>` sections) and wants a
-formatted PDF matching the official NIH biographical sketch form.
+formatted PDF matching the current NIH biographical sketch form.
+
+**Backward compatibility**: The script accepts XML from both the new and old
+format. If the XML has citations embedded under contributions or the personal
+statement (old format), those citations are collected into the Products section
+in the PDF output. This enables converting old-format documents to the new
+layout.
 
 ## Dependencies
 
@@ -71,31 +77,35 @@ with a `.pdf` extension.
 ### Step 4: Report results
 
 Tell the user the output PDF path and summarize what was rendered (education
-entries, positions, honors, contributions with citation counts, research support
-entries, page count).
+entries, positions, honors, products, contributions, research support entries,
+page count).
 
 ## PDF layout reference
 
-The generated PDF reproduces the standard NIH Biographical Sketch form:
+The generated PDF follows the new NIH Common Form layout (effective 01/25/2026):
 
-- **Page header**: "OMB No. 0925-0001 and 0925-0002 (Rev. 10/2021 Approved
-  Through 09/30/2024)" (left), "Biographical Sketch Format Page" (right)
+- **Page header**: "OMB No. 0925-0001 and 0925-0002" (left),
+  "Biographical Sketch Format Page" (right)
 - **Title**: "BIOGRAPHICAL SKETCH" (centered, bold)
 - **Subtitle**: Instructions text about providing information for Senior/key
   personnel
-- **Identification fields**: NAME, eRA COMMONS USER NAME, POSITION TITLE
-  (each as a labeled line with horizontal rules)
-- **Education/Training section**: Table with columns for INSTITUTION AND
-  LOCATION, DEGREE (if applicable), Completion Date (MM/YYYY), FIELD OF STUDY
-- **Section A — Personal Statement**: Narrative paragraph followed by up to 4
-  numbered citations
-- **Section B — Positions, Scientific Appointments, and Honors**: Three
-  subsections:
-  - Positions and Employment
-  - Other Experience and Professional Memberships
-  - Honors
-- **Section C — Contribution to Science**: Up to 5 numbered contributions,
-  each with a narrative description followed by up to 4 lettered citations
-- **Section D — Additional Information: Research Support and Scholastic
-  Performance** (optional): Lists ongoing and completed support
+
+**Common Form sections:**
+- **Identifying Information**: NAME, ORCID iD, eRA COMMONS USER NAME,
+  POSITION TITLE (each as a labeled line with horizontal rules)
+- **Professional Preparation**: Table with columns for INSTITUTION AND
+  LOCATION, DEGREE, Completion Date (MM/YYYY), FIELD OF STUDY
+- **Appointments & Positions**: Positions from the past 3 years, reverse
+  chronological order
+- **Products**: Two subsections:
+  - "Most closely related to the proposed project" (up to 5)
+  - "Other significant products" (up to 5)
+
+**NIH Supplement sections:**
+- **Personal Statement**: Narrative text only (no citations)
+- **Honors**: List of honors and awards (up to 15)
+- **Contributions to Science**: Up to 5 numbered contributions, each with a
+  narrative description only (no embedded citations)
+- **Research Support**: Ongoing and completed support (optional)
+
 - **Page footer**: "Page X of Y" (right-aligned)
